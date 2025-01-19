@@ -21,20 +21,20 @@ def display_menu():
 # ฟังก์ชันสำหรับฆ่ากระบวนการที่ใช้งานพอร์ต 5000
 def kill_process_using_port(port):
     try:
-        result = subprocess.check_output(f"lsof -t -i :{port}", shell=True)
-        pid = int(result.strip())
-        os.kill(pid, signal.SIGTERM)
-        print(f"กระบวนการที่ใช้พอร์ต {port} ถูกปิดแล้ว (PID: {pid})")
+        # ใช้ ss แทน lsof เพื่อหากระบวนการที่ใช้พอร์ต
+        result = subprocess.check_output(f"ss -ltnp 'sport = :{port}'", shell=True)
+        pid = None
+        for line in result.decode('utf-8').splitlines():
+            if 'pid' in line:
+                pid = line.split()[5].split(',')[0].split('=')[1]
+                break
+        if pid:
+            os.kill(int(pid), signal.SIGTERM)
+            print(f"กระบวนการที่ใช้พอร์ต {port} ถูกปิดแล้ว (PID: {pid})")
+        else:
+            print(f"ไม่พบกระบวนการที่ใช้พอร์ต {port}")
     except subprocess.CalledProcessError:
         print(f"ไม่พบกระบวนการที่ใช้พอร์ต {port}")
-
-# ฟังก์ชันสำหรับรันไฟล์ PHP และส่งผลลัพธ์
-def run_php_file(file_path):
-    try:
-        result = subprocess.check_output(['php', file_path], stderr=subprocess.STDOUT)
-        return result.decode('utf-8')  # คืนค่าผลลัพธ์จาก PHP
-    except subprocess.CalledProcessError as e:
-        return f"เกิดข้อผิดพลาดในการรัน PHP: {e.output.decode('utf-8')}"
 
 # กำหนดเส้นทางที่ URL '/' ให้แสดงเนื้อหาจากไฟล์ PHP
 @app.route('/')
