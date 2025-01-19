@@ -1,6 +1,8 @@
 from flask import Flask, Response
 import os
+import signal
 import subprocess
+import sys
 
 app = Flask(__name__)
 
@@ -41,7 +43,7 @@ def index():
     if chosen_option is None:
         # ถ้าไม่มีการเลือกให้แสดงเมนูอีกครั้ง
         display_menu()
-    
+
     if chosen_option == '1':
         location_file = os.path.join(os.getcwd(), '.site', 'location', 'location.php')
         content = run_php_file(location_file)
@@ -52,6 +54,15 @@ def index():
         return Response(content, mimetype='text/html')
     else:
         return "ตัวเลือกไม่ถูกต้อง"
+
+# ฟังก์ชันสำหรับจับสัญญาณ SIGINT เมื่อกด Ctrl+C
+def signal_handler(sig, frame):
+    print("\nกำลังปิดเซิร์ฟเวอร์...")
+    kill_process_using_port(5000)
+    sys.exit(0)
+
+# เชื่อมโยงฟังก์ชันกับสัญญาณ SIGINT
+signal.signal(signal.SIGINT, signal_handler)
 
 if __name__ == '__main__':
     # ตรวจสอบและฆ่ากระบวนการที่ใช้พอร์ต 5000
